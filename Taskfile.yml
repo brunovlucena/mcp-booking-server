@@ -1,0 +1,80 @@
+version: '3'
+
+vars:
+  IMAGE_NAME: mcp-booking-server
+  TAG: latest
+  PORT: 3001
+  CONTAINER_NAME: mcp-booking-server
+
+tasks:
+  help:
+    desc: "Show available tasks"
+    cmds:
+      - task --list
+
+  setup:
+    desc: "Setup project"
+    cmds:
+      - npm install
+      - |
+        if [ ! -f .env ]; then
+          cp env.example .env
+          echo "Created .env file"
+        fi
+
+  build:
+    desc: "Build project"
+    cmds:
+      - npm run build
+
+  start:
+    desc: "Start server"
+    cmds:
+      - npm start
+    deps: [build]
+
+  dev:
+    desc: "Start development server"
+    cmds:
+      - npm run dev
+
+  test:
+    desc: "Run tests"
+    cmds:
+      - npm test
+
+  lint:
+    desc: "Run linter"
+    cmds:
+      - npm run lint
+
+  clean:
+    desc: "Clean build files"
+    cmds:
+      - npm run clean
+
+  docker-build:
+    desc: "Build Docker image"
+    cmds:
+      - docker build -t {{.IMAGE_NAME}}:{{.TAG}} .
+
+  docker-run:
+    desc: "Run Docker container"
+    cmds:
+      - docker run -p {{.PORT}}:{{.PORT}} --name {{.CONTAINER_NAME}} {{.IMAGE_NAME}}:{{.TAG}}
+
+  docker-stop:
+    desc: "Stop Docker container"
+    cmds:
+      - docker stop {{.CONTAINER_NAME}} || true
+      - docker rm {{.CONTAINER_NAME}} || true
+
+  docker-compose-up:
+    desc: "Start with Docker Compose"
+    cmds:
+      - docker-compose up -d
+
+  docker-compose-down:
+    desc: "Stop Docker Compose"
+    cmds:
+      - docker-compose down
