@@ -21,8 +21,6 @@ class BookingMCPServer {
       {
         name: process.env.MCP_SERVER_NAME || 'booking-server',
         version: process.env.MCP_SERVER_VERSION || '1.0.0',
-      },
-      {
         capabilities: {
           tools: {},
         },
@@ -226,6 +224,48 @@ class BookingMCPServer {
               required: ['destination', 'checkin', 'checkout', 'minRating'],
             },
           },
+          {
+            name: 'complete_checkout',
+            description: 'Processo completo de checkout: busca hotéis, seleciona o melhor e faz a reserva automaticamente',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                destination: {
+                  type: 'string',
+                  description: 'Destino da viagem (ex: Fernando de Noronha, São Paulo)',
+                },
+                checkin: {
+                  type: 'string',
+                  description: 'Data de check-in no formato YYYY-MM-DD',
+                },
+                checkout: {
+                  type: 'string',
+                  description: 'Data de check-out no formato YYYY-MM-DD',
+                },
+                guests: {
+                  type: 'number',
+                  description: 'Número de hóspedes',
+                  default: 1,
+                },
+                rooms: {
+                  type: 'number',
+                  description: 'Número de quartos',
+                  default: 1,
+                },
+                children: {
+                  type: 'number',
+                  description: 'Número de crianças',
+                  default: 0,
+                },
+                childrenAges: {
+                  type: 'array',
+                  items: { type: 'number' },
+                  description: 'Idades das crianças',
+                },
+              },
+              required: ['destination', 'checkin', 'checkout'],
+            },
+          },
         ],
       };
     });
@@ -233,25 +273,30 @@ class BookingMCPServer {
     // Executar ferramentas
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
+      
+      // Type guard para verificar se args existe
+      if (!args) {
+        throw new Error('Argumentos não fornecidos');
+      }
 
       try {
         switch (name) {
           case 'search_hotels':
             const searchParams: HotelSearchParams = {
-              destination: args.destination,
-              checkin: args.checkin,
-              checkout: args.checkout,
-              guests: args.guests || 2,
-              rooms: args.rooms || 1,
-              children: args.children || 0,
-              childrenAges: args.childrenAges || []
+              destination: String(args.destination),
+              checkin: String(args.checkin),
+              checkout: String(args.checkout),
+              guests: Number(args.guests) || 2,
+              rooms: Number(args.rooms) || 1,
+              children: Number(args.children) || 0,
+              childrenAges: Array.isArray(args.childrenAges) ? args.childrenAges.map(Number) : []
             };
             const hotels = await this.bookingService.searchHotels(searchParams);
             return {
               content: [
                 {
                   type: 'text',
-                  text: `Encontrados ${hotels.length} hotéis em ${args.destination}:\n\n` +
+                  text: `Encontrados ${hotels.length} hotéis em ${String(args.destination)}:\n\n` +
                         hotels.map((hotel, index) => 
                           `${index + 1}. ${hotel.name}\n` +
                           `   Preço: ${hotel.price}\n` +
@@ -264,7 +309,7 @@ class BookingMCPServer {
             };
 
           case 'get_hotel_details':
-            const details = await this.bookingService.getHotelDetails(args.hotelUrl);
+            const details = await this.bookingService.getHotelDetails(String(args.hotelUrl));
             return {
               content: [
                 {
@@ -281,25 +326,25 @@ class BookingMCPServer {
 
           case 'make_reservation':
             const bookingDetails: BookingDetails = {
-              hotelName: args.hotelName,
-              checkin: args.checkin,
-              checkout: args.checkout,
-              guests: args.guests,
-              rooms: args.rooms,
-              totalPrice: args.totalPrice
+              hotelName: String(args.hotelName),
+              checkin: String(args.checkin),
+              checkout: String(args.checkout),
+              guests: Number(args.guests),
+              rooms: Number(args.rooms),
+              totalPrice: String(args.totalPrice)
             };
-            const reservation = await this.bookingService.makeReservation(args.hotelUrl, bookingDetails);
+            const reservation = await this.bookingService.makeReservation(String(args.hotelUrl), bookingDetails);
             return {
               content: [
                 {
                   type: 'text',
                   text: `Reserva ${reservation.success ? 'realizada' : 'falhou'}!\n\n` +
-                        `Hotel: ${args.hotelName}\n` +
-                        `Check-in: ${args.checkin}\n` +
-                        `Check-out: ${args.checkout}\n` +
-                        `Hóspedes: ${args.guests}\n` +
-                        `Quartos: ${args.rooms}\n` +
-                        `Preço Total: ${args.totalPrice}\n` +
+                        `Hotel: ${String(args.hotelName)}\n` +
+                        `Check-in: ${String(args.checkin)}\n` +
+                        `Check-out: ${String(args.checkout)}\n` +
+                        `Hóspedes: ${Number(args.guests)}\n` +
+                        `Quartos: ${Number(args.rooms)}\n` +
+                        `Preço Total: ${String(args.totalPrice)}\n` +
                         `Código de Confirmação: ${reservation.confirmationCode}\n` +
                         `Mensagem: ${reservation.message}\n`
                 }
@@ -337,22 +382,22 @@ class BookingMCPServer {
 
           case 'search_hotels_by_price_range':
             const priceSearchParams: HotelSearchParams = {
-              destination: args.destination,
-              checkin: args.checkin,
-              checkout: args.checkout,
-              guests: args.guests || 2,
-              rooms: args.rooms || 1
+              destination: String(args.destination),
+              checkin: String(args.checkin),
+              checkout: String(args.checkout),
+              guests: Number(args.guests) || 2,
+              rooms: Number(args.rooms) || 1
             };
             const priceHotels = await this.bookingService.searchHotels(priceSearchParams);
             const filteredByPrice = priceHotels.filter(hotel => {
               const price = parseFloat(hotel.price.replace(/[^\d,]/g, '').replace(',', '.'));
-              return price >= args.minPrice && price <= args.maxPrice;
+              return price >= Number(args.minPrice) && price <= Number(args.maxPrice);
             });
             return {
               content: [
                 {
                   type: 'text',
-                  text: `Hotéis na faixa de preço R$ ${args.minPrice} - R$ ${args.maxPrice}:\n\n` +
+                  text: `Hotéis na faixa de preço R$ ${Number(args.minPrice)} - R$ ${Number(args.maxPrice)}:\n\n` +
                         filteredByPrice.map((hotel, index) => 
                           `${index + 1}. ${hotel.name}\n` +
                           `   Preço: ${hotel.price}\n` +
@@ -365,19 +410,19 @@ class BookingMCPServer {
 
           case 'search_hotels_by_rating':
             const ratingSearchParams: HotelSearchParams = {
-              destination: args.destination,
-              checkin: args.checkin,
-              checkout: args.checkout,
-              guests: args.guests || 2,
-              rooms: args.rooms || 1
+              destination: String(args.destination),
+              checkin: String(args.checkin),
+              checkout: String(args.checkout),
+              guests: Number(args.guests) || 2,
+              rooms: Number(args.rooms) || 1
             };
             const ratingHotels = await this.bookingService.searchHotels(ratingSearchParams);
-            const filteredByRating = ratingHotels.filter(hotel => hotel.rating >= args.minRating);
+            const filteredByRating = ratingHotels.filter(hotel => hotel.rating >= Number(args.minRating));
             return {
               content: [
                 {
                   type: 'text',
-                  text: `Hotéis com classificação ${args.minRating}+ estrelas:\n\n` +
+                  text: `Hotéis com classificação ${Number(args.minRating)}+ estrelas:\n\n` +
                         filteredByRating.map((hotel, index) => 
                           `${index + 1}. ${hotel.name}\n` +
                           `   Preço: ${hotel.price}\n` +
@@ -387,6 +432,72 @@ class BookingMCPServer {
                 }
               ]
             };
+
+          case 'complete_checkout':
+            const checkoutParams: HotelSearchParams = {
+              destination: String(args.destination),
+              checkin: String(args.checkin),
+              checkout: String(args.checkout),
+              guests: Number(args.guests) || 1,
+              rooms: Number(args.rooms) || 1,
+              children: Number(args.children) || 0,
+              childrenAges: Array.isArray(args.childrenAges) ? args.childrenAges.map(Number) : []
+            };
+            const checkoutResult = await this.bookingService.completeCheckout(checkoutParams);
+            
+            if (checkoutResult.success) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `🎉 CHECKOUT COMPLETO!\n\n` +
+                          `✅ Reserva realizada com sucesso!\n\n` +
+                          `🏨 Hotel: ${checkoutResult.hotel.name}\n` +
+                          `💰 Preço Total: ${checkoutResult.booking.totalPrice}\n` +
+                          `📅 Check-in: ${checkoutResult.booking.checkin}\n` +
+                          `📅 Check-out: ${checkoutResult.booking.checkout}\n` +
+                          `👤 Hóspedes: ${checkoutResult.booking.guests}\n` +
+                          `🛏️  Quartos: ${checkoutResult.booking.rooms}\n` +
+                          `🔢 Código de Confirmação: ${checkoutResult.booking.confirmationCode}\n` +
+                          `📍 Localização: ${checkoutResult.hotel.location}\n` +
+                          `⭐ Classificação: ${checkoutResult.hotel.rating}/10\n\n` +
+                          `📧 Detalhes da reserva foram enviados por email.\n` +
+                          `🔗 Link do hotel: ${checkoutResult.hotel.url}\n\n` +
+                          `💡 Dicas importantes:\n` +
+                          `• Confirme a reserva diretamente com o hotel\n` +
+                          `• Verifique as políticas de cancelamento\n` +
+                          `• Leve o código de confirmação no check-in\n`
+                  }
+                ]
+              };
+            } else {
+              let message = `❌ Checkout não pôde ser completado.\n\n`;
+              message += `📋 Status: ${checkoutResult.message}\n\n`;
+              
+              if (checkoutResult.alternativeHotels && checkoutResult.alternativeHotels.length > 0) {
+                message += `🏨 Hotéis alternativos encontrados:\n\n`;
+                checkoutResult.alternativeHotels.forEach((hotel: any, index: number) => {
+                  message += `${index + 1}. ${hotel.name}\n`;
+                  message += `   💰 Preço: ${hotel.price}\n`;
+                  message += `   ⭐ Classificação: ${hotel.rating}/10\n`;
+                  message += `   🔗 URL: ${hotel.url}\n\n`;
+                });
+              }
+              
+              message += `💡 Recomendações:\n`;
+              message += `• Tente datas diferentes\n`;
+              message += `• Entre em contato diretamente com as pousadas locais\n`;
+              message += `• Use sites especializados em Fernando de Noronha\n`;
+              
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: message
+                  }
+                ]
+              };
+            }
 
           default:
             throw new Error(`Ferramenta desconhecida: ${name}`);

@@ -78,3 +78,27 @@ tasks:
     desc: "Stop Docker Compose"
     cmds:
       - docker-compose down
+
+  test-local:
+    desc: "Run local tests"
+    cmds:
+      - chmod +x test-local.sh
+      - ./test-local.sh
+
+  test-cursor:
+    desc: "Test Cursor connection"
+    cmds:
+      - chmod +x test-cursor-connection.sh
+      - ./test-cursor-connection.sh
+
+  cursor-setup:
+    desc: "Setup for Cursor MCP"
+    cmds:
+      - task: build
+      - echo "MCP Server ready for Cursor!"
+      - echo "Use cursor-mcp-config.json in Cursor settings"
+
+  generate-cursor-config:
+    desc: "Generate Cursor MCP configuration file"
+    cmds:
+      - node generate-cursor-config.js
