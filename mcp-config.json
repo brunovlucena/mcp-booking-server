@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "booking-server": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "cwd": "/Users/brunolucena/workspace/mcp-booking-server",
+      "env": {
+        "MCP_SERVER_NAME": "booking-server",
+        "MCP_SERVER_VERSION": "1.0.0",
+        "BOOKING_BASE_URL": "https://www.booking.com",
+        "BOOKING_LANGUAGE": "pt-br",
+        "BOOKING_CURRENCY": "BRL",
+        "BROWSER_HEADLESS": "true",
+        "BROWSER_TIMEOUT": "30000",
+        "LOG_LEVEL": "info"
+      }
+    }
+  }
+}

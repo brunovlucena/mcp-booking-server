@@ -1,0 +1,52 @@
+# 🏨 MCP Booking Server - Task Configuration
+# Configuração do Task baseada no padrão Docker MCP Registry
+
+# Configurações globais
+output: prefixed
+color: true
+summary: true
+
+# Configurações de variáveis
+vars:
+  IMAGE_NAME: mcp-booking-server
+  TAG: latest
+  DEV_TAG: dev
+  PORT: 3001
+  CONTAINER_NAME: mcp-booking-server
+  DEV_CONTAINER_NAME: mcp-booking-dev
+  BOOKING_BASE_URL: https://www.booking.com
+  BOOKING_LANGUAGE: pt-br
+  BOOKING_CURRENCY: BRL
+
+# Configurações de output
+output_mode: prefixed
+output_group: true
+output_group_begin: "🏨"
+output_group_end: "✅"
+
+# Configurações de erro
+stop_on_error: true
+error_on_failure: true
+
+# Configurações de paralelização
+concurrent: true
+max_concurrent: 4
+
+# Configurações de cache
+cache: true
+cache_dir: .task-cache
+
+# Configurações de watch
+watch: true
+watch_interval: 1s
+
+# Configurações de log
+log_level: info
+log_format: json
+
+# Configurações de timeout
+timeout: 300s
+
+# Configurações de retry
+retry: 3
+retry_interval: 5s

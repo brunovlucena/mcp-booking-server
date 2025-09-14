@@ -1,0 +1,214 @@
+# 🏨 MCP Booking Server - MCP Registry Configuration
+# Configuração para o Docker MCP Registry
+# Baseado em: https://github.com/docker/mcp-registry/blob/main/CONTRIBUTING.md
+
+name: mcp-booking-server
+version: 1.0.0
+description: "MCP Server para reservas no Booking.com"
+author: "Bruno Lucena"
+license: "MIT"
+repository: "https://github.com/brunovlucena/mcp-booking-server"
+homepage: "https://github.com/brunovlucena/mcp-booking-server"
+
+# Metadados do servidor MCP
+mcp:
+  name: "booking-server"
+  version: "1.0.0"
+  description: "Servidor MCP para reservas e busca de hotéis no Booking.com"
+  capabilities:
+    tools: true
+    resources: false
+    prompts: false
+    logging: true
+
+# Configurações do Docker
+docker:
+  image: "mcp-booking-server"
+  tag: "latest"
+  platform: "linux/amd64"
+  arch:
+    - "amd64"
+    - "arm64"
+  
+  # Configurações de build
+  build:
+    context: "."
+    dockerfile: "Dockerfile"
+    target: "production"
+    args:
+      - "NODE_ENV=production"
+      - "MCP_SERVER_NAME=booking-server"
+      - "MCP_SERVER_VERSION=1.0.0"
+  
+  # Configurações de runtime
+  runtime:
+    ports:
+      - "3001:3001"
+    environment:
+      - "NODE_ENV=production"
+      - "MCP_SERVER_NAME=booking-server"
+      - "MCP_SERVER_VERSION=1.0.0"
+      - "PORT=3001"
+      - "LOG_LEVEL=info"
+      - "BOOKING_BASE_URL=https://www.booking.com"
+      - "BOOKING_LANGUAGE=pt-br"
+      - "BOOKING_CURRENCY=BRL"
+    volumes:
+      - "./logs:/app/logs"
+      - "./data:/app/data"
+    restart: "unless-stopped"
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('Health check')"]
+      interval: "30s"
+      timeout: "10s"
+      retries: 3
+      start_period: "40s"
+
+# Configurações de desenvolvimento
+development:
+  docker:
+    image: "mcp-booking-server"
+    tag: "dev"
+    platform: "linux/amd64"
+    build:
+      context: "."
+      dockerfile: "Dockerfile.dev"
+      target: "development"
+    runtime:
+      ports:
+        - "3002:3001"
+      environment:
+        - "NODE_ENV=development"
+        - "MCP_SERVER_NAME=booking-server-dev"
+        - "MCP_SERVER_VERSION=1.0.0-dev"
+        - "PORT=3001"
+        - "LOG_LEVEL=debug"
+        - "BROWSER_HEADLESS=false"
+      volumes:
+        - ".:/app"
+        - "/app/node_modules"
+
+# Configurações de teste
+testing:
+  docker:
+    image: "mcp-booking-server"
+    tag: "test"
+    platform: "linux/amd64"
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+      target: "production"
+    runtime:
+      environment:
+        - "NODE_ENV=test"
+        - "MCP_SERVER_NAME=booking-server-test"
+        - "MCP_SERVER_VERSION=1.0.0-test"
+        - "PORT=3001"
+        - "LOG_LEVEL=debug"
+
+# Configurações de CI/CD
+ci:
+  build:
+    context: "."
+    dockerfile: "Dockerfile"
+    target: "production"
+    cache_from:
+      - "mcp-booking-server:latest"
+      - "mcp-booking-server:dev"
+    cache_to:
+      - "type=registry,ref=mcp-booking-server:cache"
+  
+  test:
+    image: "mcp-booking-server:test"
+    commands:
+      - "npm test"
+      - "npm run lint"
+      - "npm run build"
+  
+  deploy:
+    image: "mcp-booking-server:latest"
+    registry: "ghcr.io"
+    namespace: "brunovlucena"
+    tags:
+      - "latest"
+      - "v1.0.0"
+      - "stable"
+
+# Configurações de monitoramento
+monitoring:
+  metrics:
+    enabled: true
+    port: 9090
+    path: "/metrics"
+  
+  logging:
+    level: "info"
+    format: "json"
+    output: "stdout"
+  
+  health:
+    enabled: true
+    port: 3001
+    path: "/health"
+
+# Configurações de segurança
+security:
+  user: "mcpuser"
+  uid: 1001
+  gid: 1001
+  
+  capabilities:
+    - "NET_BIND_SERVICE"
+  
+  seccomp:
+    profile: "default"
+  
+  apparmor:
+    profile: "docker-default"
+
+# Configurações de recursos
+resources:
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+  
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+
+# Configurações de rede
+network:
+  mode: "bridge"
+  ports:
+    - "3001:3001"
+  
+  dns:
+    - "8.8.8.8"
+    - "8.8.4.4"
+
+# Configurações de volumes
+volumes:
+  logs:
+    type: "bind"
+    source: "./logs"
+    target: "/app/logs"
+    mode: "rw"
+  
+  data:
+    type: "bind"
+    source: "./data"
+    target: "/app/data"
+    mode: "rw"
+
+# Configurações de labels
+labels:
+  - "org.opencontainers.image.title=MCP Booking Server"
+  - "org.opencontainers.image.description=MCP Server para reservas no Booking.com"
+  - "org.opencontainers.image.version=1.0.0"
+  - "org.opencontainers.image.authors=Bruno Lucena"
+  - "org.opencontainers.image.url=https://github.com/brunovlucena/mcp-booking-server"
+  - "org.opencontainers.image.source=https://github.com/brunovlucena/mcp-booking-server"
+  - "org.opencontainers.image.licenses=MIT"
+  - "mcp.server.name=booking-server"
+  - "mcp.server.version=1.0.0"
+  - "mcp.server.capabilities=tools,logging"
